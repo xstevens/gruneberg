@@ -1,0 +1,6 @@
+More documentation to come later but short version:
+
+Dependencies:
+Python 2.6+
+Thrift
+HBase Thrift python module

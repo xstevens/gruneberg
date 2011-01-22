@@ -22,31 +22,35 @@ log = logging.getLogger("")
 log.setLevel(logging.DEBUG)
 
 '''
-A class to emit Ganglia metrics based on values in HBase tables
+A class to emit Ganglia metrics based on the number of rows in HBase tables
 '''
-class HBaseMetric:
+class HBaseCountMetric:
     def __init__(self, hbc, gmetric):
         self.hbc = hbc
         self.gmetric = gmetric
         
-    def emit_row(self, table_name, row_id, gmetric_config):
-        results = self.hbc.get_client().getRow(table_name, row_id)
-        result_dict = {}
-        for r in results:
-            for column_name,v in r.columns.items():
-                result_dict[column_name] = long(struct.unpack('>q', v.value)[0])
-
-        for column_name,column_value in result_dict.iteritems():
-            log.debug("%s => %s" % (column_name, column_value))
-            metric_name = "%s.%s" % (table_name, column_name)
+    def emit_row(self, table_name, gmetric_config):
+        client = self.hbc.get_client()
+        scanner_id = client.scannerOpen(table_name, "", [])
+        try:
+            raw_row = client.scannerGet(scanner_id)
+            count = 0
+            while raw_row:
+                count += 1
+                raw_row = client.scannerGet(scanner_id)
+            
+            log.debug("%s => %s" % (table_name, count))
+            metric_name = "%s" % (table_name)
             self.gmetric.send_meta(metric_name, gmetric_config.type, gmetric_config.units, gmetric_config.slope, gmetric_config.tmax, gmetric_config.dmax, gmetric_config.group_name)
-            self.gmetric.send(metric_name, column_value, gmetric_config.type)
+            self.gmetric.send(metric_name, count, gmetric_config.type)
+        finally:
+            client.scannerClose(scanner_id)        
         
 '''
 Print usage information
 '''
 def usage():
-    print "Usage: %s [--help] [--hbase_thrift server[:port]] [--gmetric server[:port]] table row_id" % (sys.argv[0])
+    print "Usage: %s [--help] [--hbase_thrift server[:port]] [--gmetric server[:port]] table" % (sys.argv[0])
     
 def main(argv=None):
     # parse command line options
@@ -82,19 +86,17 @@ def main(argv=None):
             ganglia_metric_group_name = a
                 
     # process arguments
-    row_id = None
     table_name = None
-    if len(args) > 1:
+    if len(args) > 0:
         table_name = args[0]
-        row_id = args[1]
     
     hbc = None
     try:
         hbc = HBaseConnection(thrift_server, thrift_server_port)
         gmetric = Gmetric(ganglia_host, ganglia_port, ganglia_protocol)
-        hbm = HBaseMetric(hbc, gmetric)
+        hbm = HBaseCountMetric(hbc, gmetric)
         gmc = GmetricConfig(type="int32", group_name=ganglia_metic_group_name)
-        hbm.emit_row(table_name, row_id, gmc)                
+        hbm.emit_row(table_name, gmc)                
     except Thrift.TException, tx:
         logging.error("Thrift exception: %s" % (tx.message))
     finally:

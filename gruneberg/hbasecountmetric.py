@@ -33,11 +33,9 @@ class HBaseCountMetric:
         client = self.hbc.get_client()
         scanner_id = client.scannerOpen(table_name, "", [])
         try:
-            raw_row = client.scannerGet(scanner_id)
             count = 0
-            while raw_row:
+            while client.scannerGet(scanner_id):
                 count += 1
-                raw_row = client.scannerGet(scanner_id)
             
             log.debug("%s => %s" % (table_name, count))
             metric_name = "%s" % (table_name)

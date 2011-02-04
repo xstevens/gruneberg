@@ -1,6 +1,11 @@
 More documentation to come later but short version:
 
-Dependencies:
+Requirements
+======================================================================
 Python 2.6+
 Thrift
 HBase Thrift python module
+
+License
+======================================================================
+All aspects of this software written in Python are distributed under the Mozilla Public License (http://www.mozilla.org/MPL/) MPL/LGPL/GPL tri-license with the exception of gmetric.py which was originally written by Nick Galbreath and released under the MIT License.

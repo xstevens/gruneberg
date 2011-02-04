@@ -93,7 +93,7 @@ def main(argv=None):
         hbc = HBaseConnection(thrift_server, thrift_server_port)
         gmetric = Gmetric(ganglia_host, ganglia_port, ganglia_protocol)
         hbm = HBaseMetric(hbc, gmetric)
-        gmc = GmetricConfig(type="int32", group_name=ganglia_metic_group_name)
+        gmc = GmetricConfig(type="int32", group_name=ganglia_metric_group_name)
         hbm.emit_row(table_name, row_id, gmc)                
     except Thrift.TException, tx:
         logging.error("Thrift exception: %s" % (tx.message))
